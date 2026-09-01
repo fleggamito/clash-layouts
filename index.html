@@ -13,14 +13,13 @@
     header { text-align: center; margin-bottom: 35px; }
     
     .clan-logo { 
-      width: 140px; 
-      height: 140px; 
+      width: 220px; 
+      height: 220px; 
       object-fit: contain; 
       margin-bottom: 12px;
-      filter: drop-shadow(0px 4px 12px rgba(255, 204, 0, 0.3));
+      filter: drop-shadow(0px 6px 16px rgba(255, 204, 0, 0.35));
     }
 
-    .clan-title { color: #ffcc00; font-size: 2.5rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(255, 204, 0, 0.2); margin-bottom: 8px; }
     .clan-link-btn { display: inline-block; background: #202024; color: #ffcc00; border: 1px solid #ffcc00; padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 25px; transition: 0.2s; }
     .clan-link-btn:hover { background: #ffcc00; color: #121214; transform: translateY(-2px); }
 
@@ -82,11 +81,10 @@
 <body>
   <div class="container">
     <header>
-      <!-- Logo do Clã atualizada -->
-      <img src="Logo transparente.png" alt="Logo Kings of War" class="clan-logo">
+      <!-- Logo do Clã maior -->
+      <img src="Logo transparente.png" alt="Logo Kings of War" class="clan-logo"><br>
       
-      <h1 class="clan-title">Kings of War</h1>
-      <!-- Botão sem o número da tag -->
+      <!-- Botão Visite nosso Clã -->
       <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">⚔️ Visite nosso Clã</a>
 
       <div class="search-section">
@@ -242,7 +240,7 @@
           paginacaoHtml += `<button class="page-btn ${i === paginaAtual ? 'active' : ''}" onclick="mudarPagina(${i})">${i}</button>`;
         }
 
-        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">${paginaAtual + 1}</button>`;
+        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">Próximo</button>`;
         
         pagination.innerHTML = paginacaoHtml;
       }
