@@ -11,13 +11,12 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. Data dos últimos 30 dias para garantir bom volume de layouts
     const umMesAtras = new Date();
     umMesAtras.setDate(umMesAtras.getDate() - 30);
     const publishedAfter = umMesAtras.toISOString();
 
-    // 2. Busca abrangente para o YouTube trazer até 50 vídeos
-    const query = `TH${cv} base link layout clash of clans`;
+    // Query focada para buscar opções relevantes na API
+    const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
     const searchRes = await fetch(searchUrl);
@@ -31,18 +30,21 @@ module.exports = async (req, res) => {
       return res.json({ success: true, total: 0, data: [] });
     }
 
-    // 3. Extrai os IDs dos vídeos
     const videoIds = searchData.items.map(item => item.id.videoId).join(',');
     const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
 
     const videosRes = await fetch(videosUrl);
     const videosData = await videosRes.json();
 
-    // Regex para pegar apenas links de layout reais
+    // Regex para extrair links de layout da Supercell
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
     
-    // Regex para validar se o vídeo fala do CV correto (ex: TH14, Town Hall 14 ou CV14)
+    // 1. O título OBRIGATORIAMENTE deve conter o CV selecionado
     const cvStrictRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
+
+    // 2. Trava de Exclusão: Se o título mencionar qualquer OUTRO número de CV/TH, é rejeitado
+    // Procura por TH/CV/Town Hall seguido de um número DIFERENTE do selecionado
+    const outroCvRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!${cv}\\b)\\d+\\b`, 'i');
 
     const resultados = [];
 
@@ -50,11 +52,13 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       const descricaoCompleta = item.snippet.description || '';
 
-      // Deve ter o número do CV informado no título ou na descrição
-      const textoGeral = `${titulo} ${descricaoCompleta}`;
-      if (!cvStrictRegex.test(textoGeral)) continue;
+      // TRAVA 1: O Título precisa ter exatamente o CV selecionado
+      if (!cvStrictRegex.test(titulo)) continue;
 
-      // Pega os links de layout da descrição
+      // TRAVA 2: O Título NÃO pode ter menção a nenhum outro CV
+      if (outroCvRegex.test(titulo)) continue;
+
+      // Pega os links de layout válidos da descrição
       const links = descricaoCompleta.match(cocLayoutRegex);
 
       if (links && links.length > 0) {
