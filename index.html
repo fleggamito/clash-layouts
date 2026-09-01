@@ -326,13 +326,14 @@
       box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
 
-    /* Paginação */
+    /* Paginação com Espaçamento Ajustado */
     .pagination { 
       display: flex; 
       justify-content: center; 
       align-items: center; 
       gap: 8px; 
       margin-top: 40px; 
+      margin-bottom: 90px;
       flex-wrap: wrap; 
     }
 
@@ -362,28 +363,26 @@
 
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* Botão Voltar ao Topo */
+    /* Botão Flutuante Voltar ao Topo */
     .back-to-top {
       position: fixed;
       bottom: 30px;
-      right: 30px;
+      right: 25px;
       width: 48px;
       height: 48px;
       background: var(--accent-gold);
       color: #0b0c10;
       border: none;
       border-radius: 50%;
-      font-size: 20px;
-      font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 25px rgba(245, 176, 20, 0.35);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
-      z-index: 99;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 9999;
     }
 
     .back-to-top.visible {
@@ -393,8 +392,8 @@
 
     .back-to-top:hover {
       background: var(--accent-gold-hover);
-      transform: translateY(-4px);
-      box-shadow: 0 6px 25px rgba(245, 176, 20, 0.4);
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 30px rgba(245, 176, 20, 0.5);
     }
   </style>
 </head>
@@ -449,7 +448,11 @@
   </div>
 
   <!-- Botão Flutuante Voltar ao Topo -->
-  <button id="backToTop" class="back-to-top" onclick="voltarAoTopo()" title="Voltar ao topo">▲</button>
+  <button id="backToTop" class="back-to-top" onclick="voltarAoTopo()" aria-label="Voltar ao topo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+    </svg>
+  </button>
 
   <script>
     let todosResultados = [];
