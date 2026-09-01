@@ -82,11 +82,12 @@
 <body>
   <div class="container">
     <header>
-      <!-- Logo do Clã com o nome exato do arquivo -->
-      <img src="Logo.png.png" alt="Logo Kings of War" class="clan-logo">
+      <!-- Logo do Clã atualizada -->
+      <img src="Logo transparente.png" alt="Logo Kings of War" class="clan-logo">
       
       <h1 class="clan-title">Kings of War</h1>
-      <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">⚔️ Visite nosso Clã (#20QGC8CV2)</a>
+      <!-- Botão sem o número da tag -->
+      <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">⚔️ Visite nosso Clã</a>
 
       <div class="search-section">
         <h2>Buscador de Layouts</h2>
@@ -241,7 +242,7 @@
           paginacaoHtml += `<button class="page-btn ${i === paginaAtual ? 'active' : ''}" onclick="mudarPagina(${i})">${i}</button>`;
         }
 
-        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">Próximo</button>`;
+        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">${paginaAtual + 1}</button>`;
         
         pagination.innerHTML = paginacaoHtml;
       }
