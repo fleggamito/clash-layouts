@@ -11,10 +11,10 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. Busca vídeos publicados nos últimos 30 dias
-    const trintaDiasAtras = new Date();
-    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
-    const publishedAfter = trintaDiasAtras.toISOString();
+    // 1. Busca vídeos publicados nos últimos 45 dias
+    const quarentaECincoDiasAtras = new Date();
+    quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
+    const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
     const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
