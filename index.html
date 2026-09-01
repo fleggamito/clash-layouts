@@ -4,88 +4,371 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kings of War - Buscador de Layouts</title>
+  
+  <!-- Fonte Moderna (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121214; color: #e1e1e6; padding: 20px; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    
-    /* Header do Clã e do Buscador */
-    header { text-align: center; margin-bottom: 35px; }
-    
-    .clan-logo { 
-      width: 220px; 
-      height: 220px; 
-      object-fit: contain; 
-      margin-bottom: 12px;
-      filter: drop-shadow(0px 6px 16px rgba(255, 204, 0, 0.35));
+    :root {
+      --bg-dark: #0b0c10;
+      --card-bg: #15161c;
+      --card-border: #232530;
+      --accent-gold: #f5b014;
+      --accent-gold-hover: #ffd000;
+      --text-main: #f0f0f5;
+      --text-muted: #8e8f9f;
+      --green-btn: #10b981;
+      --green-btn-hover: #059669;
     }
 
-    .clan-link-btn { display: inline-block; background: #202024; color: #ffcc00; border: 1px solid #ffcc00; padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 25px; transition: 0.2s; }
-    .clan-link-btn:hover { background: #ffcc00; color: #121214; transform: translateY(-2px); }
-
-    .search-section { background: #1a1a1e; padding: 25px; border-radius: 12px; border: 1px solid #29292e; }
-    .search-section h2 { color: #fff; font-size: 1.4rem; margin-bottom: 6px; }
-    .search-section p { color: #a8a8b3; font-size: 14px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     
-    .search-box { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
-    select, button { padding: 12px 16px; font-size: 15px; border-radius: 8px; border: none; outline: none; }
-    select { background: #202024; color: #fff; border: 1px solid #323238; cursor: pointer; }
-    button { background: #ffcc00; color: #121214; font-weight: bold; cursor: pointer; transition: 0.2s; }
-    button:hover { background: #e6b800; transform: translateY(-2px); }
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+      background-color: var(--bg-dark); 
+      background-image: radial-gradient(circle at 50% 0%, #1f1d2b 0%, var(--bg-dark) 70%);
+      color: var(--text-main); 
+      padding: 30px 20px;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-    #status { text-align: center; margin-top: 20px; font-weight: 500; color: #ffcc00; }
+    .container { max-width: 1140px; margin: 0 auto; }
     
+    /* Header do Clã */
+    header { text-align: center; margin-bottom: 40px; }
+    
+    .logo-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+
+    .clan-logo { 
+      width: 210px; 
+      height: auto; 
+      object-fit: contain; 
+      filter: drop-shadow(0 10px 25px rgba(245, 176, 20, 0.25));
+      transition: transform 0.3s ease;
+    }
+
+    .clan-logo:hover {
+      transform: scale(1.03);
+    }
+
+    .clan-link-btn { 
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 204, 0, 0.05); 
+      color: var(--accent-gold); 
+      border: 1px solid rgba(245, 176, 20, 0.3); 
+      padding: 10px 22px; 
+      border-radius: 30px; 
+      font-size: 14px; 
+      font-weight: 600; 
+      text-decoration: none; 
+      margin-top: 10px;
+      margin-bottom: 30px; 
+      transition: all 0.25s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .clan-link-btn:hover { 
+      background: var(--accent-gold); 
+      color: #000; 
+      box-shadow: 0 4px 20px rgba(245, 176, 20, 0.4);
+      transform: translateY(-2px); 
+    }
+
+    /* Seção do Buscador */
+    .search-section { 
+      background: rgba(21, 22, 28, 0.7); 
+      padding: 35px 25px; 
+      border-radius: 16px; 
+      border: 1px solid var(--card-border); 
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+      max-width: 850px;
+      margin: 0 auto;
+    }
+
+    .search-section h2 { 
+      color: #fff; 
+      font-size: 1.6rem; 
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px; 
+    }
+
+    .search-section p { 
+      color: var(--text-muted); 
+      font-size: 14px; 
+    }
+    
+    .search-box { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 12px; 
+      margin-top: 24px; 
+      flex-wrap: wrap; 
+    }
+
+    select, button { 
+      padding: 14px 20px; 
+      font-size: 15px; 
+      font-family: inherit;
+      border-radius: 10px; 
+      border: none; 
+      outline: none; 
+    }
+
+    select { 
+      background: #1c1e26; 
+      color: #fff; 
+      border: 1px solid #2d303e; 
+      cursor: pointer; 
+      transition: border-color 0.2s;
+      min-width: 240px;
+    }
+
+    select:focus, select:hover {
+      border-color: var(--accent-gold);
+    }
+
+    button { 
+      background: linear-gradient(135deg, #f5b014 0%, #e09d00 100%); 
+      color: #0b0c10; 
+      font-weight: 700; 
+      cursor: pointer; 
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(245, 176, 20, 0.2);
+    }
+
+    button:hover { 
+      background: linear-gradient(135deg, #ffd000 0%, #f5b014 100%); 
+      transform: translateY(-2px); 
+      box-shadow: 0 6px 20px rgba(245, 176, 20, 0.35);
+    }
+
+    #status { 
+      text-align: center; 
+      margin-top: 25px; 
+      font-weight: 600; 
+      color: var(--accent-gold); 
+      font-size: 15px;
+    }
+    
+    /* Barra de Controles e Ordenação */
+    .controls-bar { 
+      display: none; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-top: 35px; 
+      padding: 0 5px;
+      flex-wrap: wrap; 
+      gap: 12px; 
+    }
+
+    .controls-bar span {
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .controls-bar select {
+      padding: 8px 14px;
+      font-size: 13px;
+      min-width: unset;
+    }
+
     /* Grid de Cards */
     .grid { 
       display: grid; 
       grid-template-columns: repeat(3, 1fr); 
       gap: 24px; 
-      margin-top: 25px; 
+      margin-top: 20px; 
     }
 
-    @media (max-width: 992px) {
-      .grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 992px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 650px) { .grid { grid-template-columns: 1fr; } }
+
+    /* Card Layout */
+    .card { 
+      background: var(--card-bg); 
+      border-radius: 14px; 
+      border: 1px solid var(--card-border); 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
     }
 
-    @media (max-width: 650px) {
-      .grid { grid-template-columns: 1fr; }
+    .card:hover { 
+      border-color: rgba(245, 176, 20, 0.5); 
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     }
 
-    .card { background: #202024; border-radius: 12px; border: 1px solid #323238; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
-    .card:hover { border-color: #ffcc00; }
-    .thumb-wrapper { position: relative; width: 100%; height: 180px; overflow: hidden; background: #000; }
-    .thumb-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-    .badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #ffcc00; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+    .thumb-wrapper { 
+      position: relative; 
+      width: 100%; 
+      height: 190px; 
+      overflow: hidden; 
+      background: #000; 
+    }
+
+    .thumb-wrapper img { 
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover; 
+      transition: transform 0.4s ease;
+    }
+
+    .card:hover .thumb-wrapper img {
+      transform: scale(1.05);
+    }
+
+    .badge { 
+      position: absolute; 
+      top: 12px; 
+      right: 12px; 
+      background: rgba(11, 12, 16, 0.85); 
+      color: var(--accent-gold); 
+      padding: 5px 10px; 
+      border-radius: 6px; 
+      font-size: 11px; 
+      font-weight: 700; 
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(245, 176, 20, 0.3);
+      backdrop-filter: blur(4px);
+    }
     
-    .pub-date { font-size: 12px; color: #8d8d99; margin-top: 8px; font-weight: 500; }
+    .card-content { 
+      padding: 18px; 
+      flex-grow: 1; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+    }
 
-    .card-content { padding: 16px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .card h3 { font-size: 15px; color: #f7f7f8; margin-top: 6px; margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .btn-video { display: inline-block; color: #a8a8b3; font-size: 13px; text-decoration: none; margin-bottom: 15px; }
-    .btn-video:hover { color: #ffcc00; text-decoration: underline; }
+    .pub-date { 
+      font-size: 12px; 
+      color: var(--text-muted); 
+      font-weight: 500; 
+      margin-bottom: 6px;
+    }
 
-    .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px; }
+    .card h3 { 
+      font-size: 15px; 
+      font-weight: 600;
+      color: var(--text-main); 
+      margin-bottom: 12px; 
+      line-height: 1.4; 
+      display: -webkit-box; 
+      -webkit-line-clamp: 2; 
+      -webkit-box-orient: vertical; 
+      overflow: hidden; 
+    }
+
+    .btn-video { 
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted); 
+      font-size: 13px; 
+      text-decoration: none; 
+      margin-bottom: 18px; 
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .btn-video:hover { color: var(--accent-gold); }
+
+    /* Links de Bases */
+    .links-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); 
+      gap: 8px; 
+      max-height: 180px; 
+      overflow-y: auto; 
+      padding-right: 2px; 
+    }
+
     .links-grid::-webkit-scrollbar { width: 4px; }
-    .links-grid::-webkit-scrollbar-thumb { background: #4d4d57; border-radius: 4px; }
+    .links-grid::-webkit-scrollbar-thumb { background: #2d303e; border-radius: 4px; }
     
-    .btn-link { display: block; background: #04d361; color: #0e0e10; text-align: center; padding: 8px 4px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 12px; transition: 0.2s; }
-    .btn-link:hover { background: #00b352; }
+    .btn-link { 
+      display: block; 
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+      color: #fff; 
+      text-align: center; 
+      padding: 9px 6px; 
+      text-decoration: none; 
+      border-radius: 8px; 
+      font-weight: 700; 
+      font-size: 12px; 
+      transition: all 0.2s ease; 
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    }
 
-    .controls-bar { display: none; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 10px; }
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 30px; flex-wrap: wrap; }
-    .page-btn { background: #202024; color: #fff; border: 1px solid #323238; padding: 8px 14px; font-size: 14px; border-radius: 6px; cursor: pointer; }
-    .page-btn.active { background: #ffcc00; color: #121214; font-weight: bold; border-color: #ffcc00; }
-    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-link:hover { 
+      filter: brightness(1.15); 
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+
+    /* Paginação */
+    .pagination { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 8px; 
+      margin-top: 40px; 
+      flex-wrap: wrap; 
+    }
+
+    .page-btn { 
+      background: var(--card-bg); 
+      color: var(--text-main); 
+      border: 1px solid var(--card-border); 
+      padding: 9px 16px; 
+      font-size: 14px; 
+      font-weight: 600;
+      border-radius: 8px; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .page-btn.active { 
+      background: var(--accent-gold); 
+      color: #0b0c10; 
+      font-weight: 700; 
+      border-color: var(--accent-gold); 
+    }
+
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <!-- Logo do Clã maior -->
-      <img src="Logo transparente.png" alt="Logo Kings of War" class="clan-logo"><br>
-      
-      <!-- Botão Visite nosso Clã -->
-      <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">⚔️ Visite nosso Clã</a>
+      <div class="logo-wrapper">
+        <img src="Logo transparente.png" alt="Logo Kings of War" class="clan-logo">
+      </div>
+      <br>
+      <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">
+        ⚔️ Visite nosso Clã
+      </a>
 
       <div class="search-section">
         <h2>Buscador de Layouts</h2>
@@ -111,9 +394,9 @@
     </header>
 
     <div id="controlsBar" class="controls-bar">
-      <span id="totalInfo" style="color: #a8a8b3; font-size: 14px;"></span>
+      <span id="totalInfo"></span>
       <div>
-        <label for="ordem" style="font-size: 14px; margin-right: 6px;">Ordenar por:</label>
+        <label for="ordem" style="font-size: 13px; color: var(--text-muted); margin-right: 6px;">Ordenar por:</label>
         <select id="ordem" onchange="alterarOrdenacao()">
           <option value="recente">Mais Recentes Primeiro</option>
           <option value="antigo">Mais Antigos Primeiro</option>
@@ -143,7 +426,7 @@
         return;
       }
 
-      status.innerText = 'Buscando vídeos e extraindo layouts...';
+      status.innerText = '⚡ Buscando vídeos e extraindo layouts...';
       resultados.innerHTML = '';
       pagination.innerHTML = '';
       controlsBar.style.display = 'none';
@@ -216,11 +499,11 @@
             <div>
               <div class="thumb-wrapper">
                 <img src="${item.thumbnail}" alt="Thumbnail">
-                <span class="badge">${item.layoutLinks.length} ${item.layoutLinks.length > 1 ? 'Bases' : 'Base'}</span>
+                <span class="badge">${item.layoutLinks.length} ${item.layoutLinks.length > 1 ? 'BASES' : 'BASE'}</span>
               </div>
               <div class="card-content">
                 <div>
-                  <div class="pub-date">📅 Publicado em: ${dataFormatada}</div>
+                  <div class="pub-date">📅 ${dataFormatada}</div>
                   <h3>${item.titulo}</h3>
                   <a href="${item.videoUrl}" target="_blank" class="btn-video">▶ Assistir no YouTube</a>
                 </div>
