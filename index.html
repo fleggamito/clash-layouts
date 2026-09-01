@@ -363,50 +363,62 @@
 
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* Botão Flutuante Voltar ao Topo Discreto */
+    /* ========================================================
+       BOTÃO VOLTAR AO TOPO (SOLUÇÃO DE PONTA)
+       ======================================================== */
     .back-to-top {
       position: fixed;
-      bottom: 25px;
-      right: 20px;
-      width: 38px;
-      height: 38px;
-      background: rgba(245, 176, 20, 0.15);
-      color: var(--accent-gold);
-      border: 1px solid rgba(245, 176, 20, 0.4);
+      bottom: 28px;
+      right: 28px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
+      background: #181a20;
+      border: 1px solid rgba(245, 176, 20, 0.35);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       opacity: 0;
       visibility: hidden;
-      transition: all 0.25s ease;
+      transform: translateY(12px) scale(0.95);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 9999;
+      padding: 0;
     }
 
     .back-to-top svg {
-      width: 18px;
-      height: 18px;
-      stroke: currentColor;
-      stroke-width: 2.5;
-      fill: none;
+      width: 20px;
+      height: 20px;
+      stroke: var(--accent-gold);
+      stroke-width: 2.2;
       stroke-linecap: round;
       stroke-linejoin: round;
+      fill: none;
+      transition: transform 0.25s ease, stroke 0.25s ease;
     }
 
     .back-to-top.visible {
       opacity: 1;
       visibility: visible;
+      transform: translateY(0) scale(1);
     }
 
     .back-to-top:hover {
       background: var(--accent-gold);
-      color: #0b0c10;
-      border-color: var(--accent-gold);
+      border-color: var(--accent-gold-hover);
+      box-shadow: 0 8px 24px rgba(245, 176, 20, 0.4);
+      transform: translateY(-3px);
+    }
+
+    .back-to-top:hover svg {
+      stroke: #0b0c10;
       transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(245, 176, 20, 0.35);
+    }
+
+    .back-to-top:active {
+      transform: translateY(-1px) scale(0.92);
     }
   </style>
 </head>
@@ -460,10 +472,10 @@
     <div id="pagination" class="pagination"></div>
   </div>
 
-  <!-- Botão Flutuante Voltar ao Topo -->
+  <!-- Botão Flutuante Voltar ao Topo (Layout Tecnológico) -->
   <button id="backToTop" class="back-to-top" onclick="voltarAoTopo()" aria-label="Voltar ao topo">
     <svg viewBox="0 0 24 24">
-      <path d="M18 15l-6-6-6 6"/>
+      <path d="M12 19V5M5 12l7-7 7 7"/>
     </svg>
   </button>
 
@@ -595,7 +607,7 @@
           paginacaoHtml += `<button class="page-btn ${i === paginaAtual ? 'active' : ''}" onclick="mudarPagina(${i})">${i}</button>`;
         }
 
-        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">Próximo</button>`;
+        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">${paginaAtual + 1 > totalPaginas ? 'Próximo' : 'Próximo'}</button>`;
         
         pagination.innerHTML = paginacaoHtml;
       }
