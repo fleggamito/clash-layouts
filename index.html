@@ -372,7 +372,7 @@
 
       <div class="search-section">
         <h2>Buscador de Layouts</h2>
-        <p>Encontre os layouts mais recentes postados no YouTube nos últimos 30 dias</p>
+        <p>Encontre os layouts mais recentes postados no YouTube nos últimos 45 dias</p>
         
         <div class="search-box">
           <select id="cv">
@@ -438,7 +438,7 @@
         status.innerText = '';
 
         if (!dados.success || !dados.data || dados.data.length === 0) {
-          status.innerText = 'Nenhum layout recente encontrado para este Centro de Vila nos últimos 30 dias.';
+          status.innerText = 'Nenhum layout recente encontrado para este Centro de Vila nos últimos 45 dias.';
           return;
         }
 
