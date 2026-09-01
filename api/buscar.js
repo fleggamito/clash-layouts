@@ -11,11 +11,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const umMesAtras = new Date();
-    umMesAtras.setDate(umMesAtras.getDate() - 30);
-    const publishedAfter = umMesAtras.toISOString();
+    // 1. Busca vídeos publicados nos últimos 30 dias
+    const trintaDiasAtras = new Date();
+    trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+    const publishedAfter = trintaDiasAtras.toISOString();
 
-    // Query focada para buscar opções relevantes na API
     const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
@@ -36,14 +36,10 @@ module.exports = async (req, res) => {
     const videosRes = await fetch(videosUrl);
     const videosData = await videosRes.json();
 
-    // Regex para extrair links de layout da Supercell
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
     
-    // 1. O título OBRIGATORIAMENTE deve conter o CV selecionado
+    // Filtro rígido no título
     const cvStrictRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
-
-    // 2. Trava de Exclusão: Se o título mencionar qualquer OUTRO número de CV/TH, é rejeitado
-    // Procura por TH/CV/Town Hall seguido de um número DIFERENTE do selecionado
     const outroCvRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!${cv}\\b)\\d+\\b`, 'i');
 
     const resultados = [];
@@ -52,13 +48,9 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       const descricaoCompleta = item.snippet.description || '';
 
-      // TRAVA 1: O Título precisa ter exatamente o CV selecionado
       if (!cvStrictRegex.test(titulo)) continue;
-
-      // TRAVA 2: O Título NÃO pode ter menção a nenhum outro CV
       if (outroCvRegex.test(titulo)) continue;
 
-      // Pega os links de layout válidos da descrição
       const links = descricaoCompleta.match(cocLayoutRegex);
 
       if (links && links.length > 0) {
@@ -74,7 +66,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ordena do mais recente para o mais antigo
+    // Ordenação inicial do mais recente para o mais antigo
     resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
 
     return res.json({ success: true, total: resultados.length, data: resultados });
