@@ -15,7 +15,8 @@ module.exports = async (req, res) => {
     seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
     const publishedAfter = seteDiasAtras.toISOString();
 
-    const query = `("TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}") "base" "clash of clans" (CWL OR war OR legend OR trophies OR league OR layout)`;
+    // Busca focada no nível específico
+    const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
     const searchRes = await fetch(searchUrl);
@@ -35,22 +36,27 @@ module.exports = async (req, res) => {
     const videosRes = await fetch(videosUrl);
     const videosData = await videosRes.json();
 
-    // Captura apenas links que contêm ação explícita de layout (OpenLayout)
+    // Expressão para pegar apenas links de layout válidos
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
-    const cvRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
+    
+    // O TÍTULO deve conter exatamente TH14, Town Hall 14 ou CV14
+    const cvStrictRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
 
     const resultados = [];
 
     for (const item of videosData.items) {
       const titulo = item.snippet.title || '';
       const descricaoCompleta = item.snippet.description || '';
-      const textoGeral = `${titulo} ${descricaoCompleta}`;
 
-      // Requisito 1: O título/descrição precisa mencionar o CV correto
-      if (!cvRegex.test(textoGeral)) continue;
+      // TRAVA 1: O título TEM que conter o Centro de Vila selecionado
+      if (!cvStrictRegex.test(titulo)) continue;
 
-      // Requisito 2: O vídeo precisa conter a palavra "base" ou "layout"
-      if (!/(base|layout)/i.test(textoGeral)) continue;
+      // TRAVA 2: O título TEM que conter palavras relacionadas a layout/base
+      if (!/(base|layout)/i.test(titulo)) continue;
+
+      // TRAVA 3: O título NÃO pode ser de outro CV (ex: TH11, TH18, etc)
+      const outrosCvsRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!\b${cv}\b)\\d+\\b`, 'i');
+      if (outrosCvsRegex.test(titulo)) continue;
 
       const links = descricaoCompleta.match(cocLayoutRegex);
 
