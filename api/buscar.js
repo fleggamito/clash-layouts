@@ -16,7 +16,8 @@ module.exports = async (req, res) => {
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
+    // Palavras-chave expandidas (incluindo BASE, BASES e RANKED)
+    const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base bases layout ranked clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
     const searchRes = await fetch(searchUrl);
