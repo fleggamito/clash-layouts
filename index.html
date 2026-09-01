@@ -20,7 +20,22 @@
 
     #status { text-align: center; margin-top: 20px; font-weight: 500; color: #ffcc00; }
     
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 25px; }
+    /* Grid ajustado para não esticar o último card */
+    .grid { 
+      display: grid; 
+      grid-template-columns: repeat(3, 1fr); 
+      gap: 24px; 
+      margin-top: 25px; 
+    }
+
+    @media (max-width: 992px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 650px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
     .card { background: #202024; border-radius: 12px; border: 1px solid #323238; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; transition: 0.2s; }
     .card:hover { border-color: #ffcc00; }
     .thumb-wrapper { position: relative; width: 100%; height: 180px; overflow: hidden; background: #000; }
@@ -34,14 +49,14 @@
     .btn-video { display: inline-block; color: #a8a8b3; font-size: 13px; text-decoration: none; margin-bottom: 15px; }
     .btn-video:hover { color: #ffcc00; text-decoration: underline; }
 
-    .links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px; }
+    /* Grid dos botões "Base X" travado com tamanho mínimo de botão */
+    .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px; }
     .links-grid::-webkit-scrollbar { width: 4px; }
     .links-grid::-webkit-scrollbar-thumb { background: #4d4d57; border-radius: 4px; }
     
-    .btn-link { display: block; background: #04d361; color: #0e0e10; text-align: center; padding: 10px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 12px; transition: 0.2s; }
+    .btn-link { display: block; background: #04d361; color: #0e0e10; text-align: center; padding: 8px 4px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 12px; transition: 0.2s; }
     .btn-link:hover { background: #00b352; }
 
-    /* Estilos de Paginação e Filtro de Ordenação */
     .controls-bar { display: none; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 10px; }
     .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; margin-top: 30px; flex-wrap: wrap; }
     .page-btn { background: #202024; color: #fff; border: 1px solid #323238; padding: 8px 14px; font-size: 14px; border-radius: 6px; cursor: pointer; }
@@ -196,7 +211,6 @@
         `;
       });
 
-      // Renderiza botões de paginação se houver mais de uma página
       if (totalPaginas > 1) {
         let paginacaoHtml = `<button class="page-btn" ${paginaAtual === 1 ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual - 1})">Anterior</button>`;
 
