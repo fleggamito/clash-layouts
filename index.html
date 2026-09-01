@@ -25,6 +25,10 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
+    html {
+      scroll-behavior: smooth;
+    }
+
     body { 
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
       background-color: var(--bg-dark); 
@@ -246,7 +250,7 @@
       letter-spacing: 0.5px;
       border: 1px solid rgba(245, 176, 20, 0.3);
       backdrop-filter: blur(4px);
-    }
+    } 
     
     .card-content { 
       padding: 18px; 
@@ -357,6 +361,41 @@
     }
 
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Botão Voltar ao Topo */
+    .back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 48px;
+      height: 48px;
+      background: var(--accent-gold);
+      color: #0b0c10;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 99;
+    }
+
+    .back-to-top.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .back-to-top:hover {
+      background: var(--accent-gold-hover);
+      transform: translateY(-4px);
+      box-shadow: 0 6px 25px rgba(245, 176, 20, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -409,10 +448,27 @@
     <div id="pagination" class="pagination"></div>
   </div>
 
+  <!-- Botão Flutuante Voltar ao Topo -->
+  <button id="backToTop" class="back-to-top" onclick="voltarAoTopo()" title="Voltar ao topo">▲</button>
+
   <script>
     let todosResultados = [];
     let paginaAtual = 1;
     const itensPorPagina = 9;
+
+    // Lógica para exibir/ocultar o botão de voltar ao topo
+    const backToTopBtn = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backToTopBtn.classList.add('visible');
+      } else {
+        backToTopBtn.classList.remove('visible');
+      }
+    });
+
+    function voltarAoTopo() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     async function buscarLayouts() {
       const cv = document.getElementById('cv').value;
@@ -458,7 +514,7 @@
       if (ordem === 'recente') {
         todosResultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
       } else {
-        todosResultados.sort((a, b) => new Date(a.publicadoEm) - new Date(b.publicadoEm));
+        todosResultados.sort((a, b) => new Date(a.publicadoEm) - new Date(a.publicadoEm));
       }
       paginaAtual = 1;
       renderizarPagina();
@@ -532,7 +588,7 @@
     function mudarPagina(novaPagina) {
       paginaAtual = novaPagina;
       renderizarPagina();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      voltarAoTopo();
     }
   </script>
 </body>
