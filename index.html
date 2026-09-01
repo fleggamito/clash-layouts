@@ -3,14 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Buscador de Layouts - Clash of Clans</title>
+  <title>Kings of War - Buscador de Layouts</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121214; color: #e1e1e6; padding: 20px; }
     .container { max-width: 1100px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 30px; }
-    h1 { color: #ffcc00; font-size: 2rem; margin-bottom: 10px; }
-    p { color: #a8a8b3; }
+    
+    /* Header do Clã e do Buscador */
+    header { text-align: center; margin-bottom: 35px; }
+    
+    .clan-logo { 
+      width: 140px; 
+      height: 140px; 
+      object-fit: contain; 
+      margin-bottom: 12px;
+      filter: drop-shadow(0px 4px 12px rgba(255, 204, 0, 0.3));
+    }
+
+    .clan-title { color: #ffcc00; font-size: 2.5rem; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(255, 204, 0, 0.2); margin-bottom: 8px; }
+    .clan-link-btn { display: inline-block; background: #202024; color: #ffcc00; border: 1px solid #ffcc00; padding: 8px 18px; border-radius: 20px; font-size: 14px; font-weight: 600; text-decoration: none; margin-bottom: 25px; transition: 0.2s; }
+    .clan-link-btn:hover { background: #ffcc00; color: #121214; transform: translateY(-2px); }
+
+    .search-section { background: #1a1a1e; padding: 25px; border-radius: 12px; border: 1px solid #29292e; }
+    .search-section h2 { color: #fff; font-size: 1.4rem; margin-bottom: 6px; }
+    .search-section p { color: #a8a8b3; font-size: 14px; }
     
     .search-box { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
     select, button { padding: 12px 16px; font-size: 15px; border-radius: 8px; border: none; outline: none; }
@@ -20,7 +36,7 @@
 
     #status { text-align: center; margin-top: 20px; font-weight: 500; color: #ffcc00; }
     
-    /* Grid ajustado para não esticar o último card */
+    /* Grid de Cards */
     .grid { 
       display: grid; 
       grid-template-columns: repeat(3, 1fr); 
@@ -49,7 +65,6 @@
     .btn-video { display: inline-block; color: #a8a8b3; font-size: 13px; text-decoration: none; margin-bottom: 15px; }
     .btn-video:hover { color: #ffcc00; text-decoration: underline; }
 
-    /* Grid dos botões "Base X" travado com tamanho mínimo de botão */
     .links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; max-height: 180px; overflow-y: auto; padding-right: 4px; }
     .links-grid::-webkit-scrollbar { width: 4px; }
     .links-grid::-webkit-scrollbar-thumb { background: #4d4d57; border-radius: 4px; }
@@ -67,24 +82,32 @@
 <body>
   <div class="container">
     <header>
-      <h1>Buscador de Layouts</h1>
-      <p>Encontre os layouts mais recentes postados no YouTube nos últimos 30 dias</p>
+      <!-- Logo do Clã com o nome exato do arquivo -->
+      <img src="Logo.png.png" alt="Logo Kings of War" class="clan-logo">
       
-      <div class="search-box">
-        <select id="cv">
-          <option value="" selected disabled>Selecione o Centro de Vila...</option>
-          <option value="18">CV 18 (TH18)</option>
-          <option value="17">CV 17 (TH17)</option>
-          <option value="16">CV 16 (TH16)</option>
-          <option value="15">CV 15 (TH15)</option>
-          <option value="14">CV 14 (TH14)</option>
-          <option value="13">CV 13 (TH13)</option>
-          <option value="12">CV 12 (TH12)</option>
-          <option value="11">CV 11 (TH11)</option>
-          <option value="10">CV 10 (TH10)</option>
-        </select>
+      <h1 class="clan-title">Kings of War</h1>
+      <a href="https://link.clashofclans.com/pt?action=OpenClanProfile&tag=20QGC8CV2" target="_blank" class="clan-link-btn">⚔️ Visite nosso Clã (#20QGC8CV2)</a>
 
-        <button onclick="buscarLayouts()">Buscar Layouts</button>
+      <div class="search-section">
+        <h2>Buscador de Layouts</h2>
+        <p>Encontre os layouts mais recentes postados no YouTube nos últimos 30 dias</p>
+        
+        <div class="search-box">
+          <select id="cv">
+            <option value="" selected disabled>Selecione o Centro de Vila...</option>
+            <option value="18">CV 18 (TH18)</option>
+            <option value="17">CV 17 (TH17)</option>
+            <option value="16">CV 16 (TH16)</option>
+            <option value="15">CV 15 (TH15)</option>
+            <option value="14">CV 14 (TH14)</option>
+            <option value="13">CV 13 (TH13)</option>
+            <option value="12">CV 12 (TH12)</option>
+            <option value="11">CV 11 (TH11)</option>
+            <option value="10">CV 10 (TH10)</option>
+          </select>
+
+          <button onclick="buscarLayouts()">Buscar Layouts</button>
+        </div>
       </div>
     </header>
 
