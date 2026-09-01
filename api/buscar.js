@@ -11,9 +11,14 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. Busca os vídeos recentes sobre o Centro de Vila informado
-    const query = `TH${cv} base link clash of clans`;
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&order=date&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
+    // 1. Calcula a data de exatamente 7 dias atrás no formato ISO
+    const seteDiasAtras = new Date();
+    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+    const publishedAfter = seteDiasAtras.toISOString();
+
+    // 2. Busca abrangente com termos em inglês/português, limite de 50 vídeos e filtro dos últimos 7 dias
+    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV${cv}" base link layout clash of clans`;
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
@@ -26,7 +31,7 @@ module.exports = async (req, res) => {
       return res.json({ success: true, total: 0, data: [] });
     }
 
-    // 2. Extrai os IDs dos vídeos para buscar a descrição COMPLETA
+    // 3. Extrai todos os IDs para checar as descrições completas em lote
     const videoIds = searchData.items.map(item => item.id.videoId).join(',');
     const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
 
@@ -36,7 +41,7 @@ module.exports = async (req, res) => {
     const cocLinkRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]+/gi;
     const resultados = [];
 
-    // 3. Examina a descrição 100% completa de cada vídeo
+    // 4. Filtra apenas os vídeos que contêm links de layout reais
     for (const item of videosData.items) {
       const descricaoCompleta = item.snippet.description || '';
       const links = descricaoCompleta.match(cocLinkRegex);
