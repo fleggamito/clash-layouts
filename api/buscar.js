@@ -11,7 +11,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Busca vídeos dos últimos 14 dias para não perder conteúdos do final do mês
     const duasSemanasAtras = new Date();
     duasSemanasAtras.setDate(duasSemanasAtras.getDate() - 14);
     const publishedAfter = duasSemanasAtras.toISOString();
@@ -45,10 +44,8 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       const descricaoCompleta = item.snippet.description || '';
 
-      // O Título precisa ter o CV selecionado
       if (!cvStrictRegex.test(titulo)) continue;
 
-      // O Título não pode citar outros CVs principais
       const outrosCvsRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!\b${cv}\b)\\d+\\b`, 'i');
       if (outrosCvsRegex.test(titulo)) continue;
 
@@ -61,10 +58,14 @@ module.exports = async (req, res) => {
           titulo: item.snippet.title,
           thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
           videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
+          publicadoEm: item.snippet.publishedAt, // Captura a data exata de publicação
           layoutLinks: linksUnicos
         });
       }
     }
+
+    // Ordena do mais recente para o mais antigo
+    resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
 
     return res.json({ success: true, total: resultados.length, data: resultados });
   } catch (error) {
