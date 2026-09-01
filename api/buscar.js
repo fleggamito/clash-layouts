@@ -11,11 +11,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const seteDiasAtras = new Date();
-    seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-    const publishedAfter = seteDiasAtras.toISOString();
+    // Busca vídeos dos últimos 14 dias para não perder conteúdos do final do mês
+    const duasSemanasAtras = new Date();
+    duasSemanasAtras.setDate(duasSemanasAtras.getDate() - 14);
+    const publishedAfter = duasSemanasAtras.toISOString();
 
-    // Busca focada no nível específico
     const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base layout clash of clans`;
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     
@@ -36,10 +36,7 @@ module.exports = async (req, res) => {
     const videosRes = await fetch(videosUrl);
     const videosData = await videosRes.json();
 
-    // Expressão para pegar apenas links de layout válidos
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
-    
-    // O TÍTULO deve conter exatamente TH14, Town Hall 14 ou CV14
     const cvStrictRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
 
     const resultados = [];
@@ -48,13 +45,10 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       const descricaoCompleta = item.snippet.description || '';
 
-      // TRAVA 1: O título TEM que conter o Centro de Vila selecionado
+      // O Título precisa ter o CV selecionado
       if (!cvStrictRegex.test(titulo)) continue;
 
-      // TRAVA 2: O título TEM que conter palavras relacionadas a layout/base
-      if (!/(base|layout)/i.test(titulo)) continue;
-
-      // TRAVA 3: O título NÃO pode ser de outro CV (ex: TH11, TH18, etc)
+      // O Título não pode citar outros CVs principais
       const outrosCvsRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!\b${cv}\b)\\d+\\b`, 'i');
       if (outrosCvsRegex.test(titulo)) continue;
 
