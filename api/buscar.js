@@ -11,51 +11,95 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. Busca vídeos publicados nos últimos 45 dias
+    // 1. Define data limite: 45 dias atrás
     const quarentaECincoDiasAtras = new Date();
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    // Palavras-chave expandidas (incluindo BASE, BASES e RANKED)
-    const query = `"TH${cv}" OR "Town Hall ${cv}" OR "CV${cv}" base bases layout ranked clash of clans`;
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
-    
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
+    // Query de busca abrangente e sem restrições que quebrem o algoritmo do YouTube
+    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" base layout clash of clans`;
 
-    if (searchData.error) {
-      return res.status(400).json({ error: `Erro do Google (${searchData.error.code}): ${searchData.error.message}` });
+    let itemsBusca = [];
+
+    // Fazemos a busca primária (Página 1 - até 50 vídeos)
+    const urlPage1 = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
+    const resPage1 = await fetch(urlPage1);
+    const dataPage1 = await resPage1.json();
+
+    if (dataPage1.error) {
+      return res.status(400).json({ error: `Erro do Google (${dataPage1.error.code}): ${dataPage1.error.message}` });
     }
 
-    if (!searchData.items || searchData.items.length === 0) {
+    if (dataPage1.items && dataPage1.items.length > 0) {
+      itemsBusca.push(...dataPage1.items);
+
+      // Se houver mais resultados, busca a Página 2 para aumentar a amostragem
+      if (dataPage1.nextPageToken) {
+        const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
+        const resPage2 = await fetch(urlPage2);
+        const dataPage2 = await resPage2.json();
+        if (dataPage2.items && dataPage2.items.length > 0) {
+          itemsBusca.push(...dataPage2.items);
+        }
+      }
+    }
+
+    if (itemsBusca.length === 0) {
       return res.json({ success: true, total: 0, data: [] });
     }
 
-    const videoIds = searchData.items.map(item => item.id.videoId).join(',');
-    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoIds}&key=${YOUTUBE_API_KEY}`;
+    // Extrai IDs únicos de vídeos
+    const videoIdsArray = [...new Set(itemsBusca.map(item => item.id.videoId))];
 
-    const videosRes = await fetch(videosUrl);
-    const videosData = await videosRes.json();
+    // Detalhes dos vídeos em lotes de 50 (limite máximo da API por requisição)
+    let videoItems = [];
+    for (let i = 0; i < videoIdsArray.length; i += 50) {
+      const chunkIds = videoIdsArray.slice(i, i + 50).join(',');
+      const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${chunkIds}&key=${YOUTUBE_API_KEY}`;
+      const videosRes = await fetch(videosUrl);
+      const videosData = await videosRes.json();
 
+      if (videosData.items) {
+        videoItems.push(...videosData.items);
+      }
+    }
+
+    // Regex aprimorada para capturar links do Clash of Clans de forma abrangente
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
+
+    // Regex flexível para validar se o vídeo realmente fala do CV/TH escolhido
+    // Aceita: TH15, TH 15, TH-15, Town Hall 15, CV15, CV 15
+    const cvStrictRegex = new RegExp(`\\b(TH[-_\\s]*${cv}|Town\\s*Hall[-_\\s]*${cv}|CV[-_\\s]*${cv})\\b`, 'i');
     
-    // Filtro rígido no título
-    const cvStrictRegex = new RegExp(`\\b(TH${cv}|Town\\s*Hall\\s*${cv}|CV${cv})\\b`, 'i');
-    const outroCvRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)\\s*(?!${cv}\\b)\\d+\\b`, 'i');
+    // Evita falsos positivos onde outro CV é o foco principal isolado (ex: buscar TH14 e vir apenas TH15)
+    const outroCvRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)[-_\\s]*(?!${cv}\\b)\\d+\\b`, 'i');
 
     const resultados = [];
 
-    for (const item of videosData.items) {
+    for (const item of videoItems) {
       const titulo = item.snippet.title || '';
-      const descricaoCompleta = item.snippet.description || '';
+      let descricaoCompleta = item.snippet.description || '';
 
-      if (!cvStrictRegex.test(titulo)) continue;
-      if (outroCvRegex.test(titulo)) continue;
+      // Limpa entidades HTML na descrição para não quebrar os links
+      descricaoCompleta = descricaoCompleta
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>');
+
+      const ehTargetCv = cvStrictRegex.test(titulo);
+      const ehOutroCv = outroCvRegex.test(titulo);
+
+      // Só aceita o vídeo se mencionar o CV correto no título
+      if (!ehTargetCv && ehOutroCv) continue;
+      if (!ehTargetCv && !cvStrictRegex.test(descricaoCompleta)) continue;
 
       const links = descricaoCompleta.match(cocLayoutRegex);
 
       if (links && links.length > 0) {
-        const linksUnicos = [...new Set(links)].map(link => link.replace(/[.,;)]+$/, ''));
+        // Limpa caracteres soltos no final dos links extraídos (ex: pontuação)
+        const linksUnicos = [...new Set(links)].map(link => 
+          link.replace(/[.,;)]+$/, '')
+        );
 
         resultados.push({
           titulo: item.snippet.title,
@@ -67,7 +111,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ordenação inicial do mais recente para o mais antigo
+    // Ordenação: mais recentes primeiro
     resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
 
     return res.json({ success: true, total: resultados.length, data: resultados });
