@@ -152,10 +152,17 @@
       box-shadow: 0 4px 15px rgba(245, 176, 20, 0.2);
     }
 
-    button:hover { 
+    button:hover:not(:disabled) { 
       background: linear-gradient(135deg, #ffd000 0%, #f5b014 100%); 
       transform: translateY(-2px); 
       box-shadow: 0 6px 20px rgba(245, 176, 20, 0.35);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
     }
 
     #status { 
@@ -363,9 +370,7 @@
 
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* ========================================================
-       BOTÃO VOLTAR AO TOPO (SOLUÇÃO DE PONTA)
-       ======================================================== */
+    /* BOTÃO VOLTAR AO TOPO */
     .back-to-top {
       position: fixed;
       bottom: 28px;
@@ -451,7 +456,7 @@
             <option value="10">CV 10 (TH10)</option>
           </select>
 
-          <button onclick="buscarLayouts()">Buscar Layouts</button>
+          <button id="btnBuscar" onclick="buscarLayouts()">Buscar Layouts</button>
         </div>
       </div>
     </header>
@@ -472,7 +477,7 @@
     <div id="pagination" class="pagination"></div>
   </div>
 
-  <!-- Botão Flutuante Voltar ao Topo (Layout Tecnológico) -->
+  <!-- Botão Flutuante Voltar ao Topo -->
   <button id="backToTop" class="back-to-top" onclick="voltarAoTopo()" aria-label="Voltar ao topo">
     <svg viewBox="0 0 24 24">
       <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -504,11 +509,16 @@
       const resultados = document.getElementById('resultados');
       const controlsBar = document.getElementById('controlsBar');
       const pagination = document.getElementById('pagination');
+      const btnBuscar = document.getElementById('btnBuscar');
 
       if (!cv) {
         status.innerText = 'Por favor, selecione um Centro de Vila antes de buscar.';
         return;
       }
+
+      // Desabilita o botão durante a busca
+      btnBuscar.disabled = true;
+      btnBuscar.innerText = 'Buscando...';
 
       status.innerText = '⚡ Buscando vídeos e extraindo layouts...';
       resultados.innerHTML = '';
@@ -534,6 +544,10 @@
         renderizarPagina();
       } catch (err) {
         status.innerText = 'Erro ao buscar layouts. Tente novamente.';
+      } finally {
+        // Reabilita o botão ao concluir (seja sucesso ou erro)
+        btnBuscar.disabled = false;
+        btnBuscar.innerText = 'Buscar Layouts';
       }
     }
 
@@ -607,7 +621,7 @@
           paginacaoHtml += `<button class="page-btn ${i === paginaAtual ? 'active' : ''}" onclick="mudarPagina(${i})">${i}</button>`;
         }
 
-        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">${paginaAtual + 1 > totalPaginas ? 'Próximo' : 'Próximo'}</button>`;
+        paginacaoHtml += `<button class="page-btn" ${paginaAtual === totalPaginas ? 'disabled' : ''} onclick="mudarPagina(${paginaAtual + 1})">Próximo</button>`;
         
         pagination.innerHTML = paginacaoHtml;
       }
