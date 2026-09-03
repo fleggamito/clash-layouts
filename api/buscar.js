@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    // Query enviada para a API do YouTube
+    // Query de busca abrangente enviada ao YouTube
     const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" OR "Centro de Vila ${cv}" OR "Townhall${cv}" base layout clash of clans`;
 
     let itemsBusca = [];
@@ -64,10 +64,10 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Regex para capturar os links oficiais do Clash of Clans
-    const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
+    // Regex ultra-flexível para capturar qualquer URL do Clash na descrição inteira
+    const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'<>]+/gi;
 
-    // Captura se o termo do CV pesquisado está presente (ex: TH14, CV14, Town Hall 14, Centro de Vila 14, etc.)
+    // Captura se o termo do CV pesquisado está presente no texto (ex: TH14, CV14, Town Hall 14, Centro de Vila 14, etc.)
     const cvTargetRegex = new RegExp(`(?:TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}\\b`, 'i');
 
     const resultados = [];
@@ -76,35 +76,42 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       let descricaoCompleta = item.snippet.description || '';
 
-      // Limpa entidades HTML na descrição
+      // Decodifica entidades HTML para garantir a integridade dos links na descrição
       descricaoCompleta = descricaoCompleta
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>');
 
-      // OBRIGATÓRIO: O vídeo precisa ter link de layout oficial
-      const links = descricaoCompleta.match(cocLayoutRegex);
-      if (!links || links.length === 0) {
+      // Busca todos os links do Clash na descrição inteira
+      const linksEncontrados = descricaoCompleta.match(cocLayoutRegex);
+      if (!linksEncontrados || linksEncontrados.length === 0) {
+        continue; // Se não tiver links de layout, descarte
+      }
+
+      // Limpa e valida os links extraídos
+      const linksLimpos = linksEncontrados
+        .map(link => link.replace(/[.,;)!?\]]+$/, '')) // Remove pontuações presas no final do link
+        .filter(link => link.includes('action=OpenLayout')); // Filtra apenas links reais de carregar vila
+
+      const linksUnicos = [...new Set(linksLimpos)]; // Remove links idênticos/repetidos
+
+      if (linksUnicos.length === 0) {
         continue;
       }
 
-      // Procura por números de CV explicitamente citados no TÍTULO (ex: captura o "18" de "TH18")
+      // Procura números de CV citados no TÍTULO (ex: captura o "18" de "TH18")
       const numerosNoTitulo = [...titulo.matchAll(/(?:TH|CV|Town\s*Hall|Townhall|Centro\s*de\s*Vila)[-_\\s]*(\d+)\b/gi)].map(m => m[1]);
 
-      // Se o título menciona um ou mais CVs, mas NENHUM deles é o CV pesquisado, ignora (ex: Título é TH18 e buscou CV14)
+      // Se o título menciona especificamente OUTRO CV (ex: Título é TH18 e buscou CV14), ignora
       if (numerosNoTitulo.length > 0 && !numerosNoTitulo.includes(String(cv))) {
         continue;
       }
 
-      // Aceita o vídeo se o CV pesquisado estiver no TÍTULO ou na DESCRIÇÃO
+      // Aceita se o CV pesquisado estiver presente no TÍTULO ou em QUALQUER lugar da DESCRIÇÃO
       const temTargetNoTitulo = cvTargetRegex.test(titulo);
       const temTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
 
       if (temTargetNoTitulo || temTargetNaDescricao) {
-        const linksUnicos = [...new Set(links)].map(link => 
-          link.replace(/[.,;)]+$/, '')
-        );
-
         resultados.push({
           titulo: item.snippet.title,
           thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
@@ -115,7 +122,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Ordenação: mais recentes primeiro
+    // Ordena os vídeos do mais recente para o mais antigo
     resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
 
     return res.json({ success: true, total: resultados.length, data: resultados });
