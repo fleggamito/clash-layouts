@@ -556,7 +556,7 @@
       if (ordem === 'recente') {
         todosResultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
       } else {
-        todosResultados.sort((a, b) => new Date(a.publicadoEm) - new Date(a.publicadoEm));
+        todosResultados.sort((a, b) => new Date(a.publicadoEm) - new Date(b.publicadoEm));
       }
       paginaAtual = 1;
       renderizarPagina();
