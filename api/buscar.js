@@ -11,17 +11,17 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // 1. Define data limite: 45 dias atrás
+    // 1. Data limite: últimos 45 dias
     const quarentaECincoDiasAtras = new Date();
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    // Query de busca abrangente enviada ao YouTube
-    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" OR "Centro de Vila ${cv}" base layout clash of clans`;
+    // Query expandida para a API do YouTube entregar o máximo de amostragem
+    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" OR "Centro de Vila ${cv}" OR "Townhall${cv}" base layout clash of clans`;
 
     let itemsBusca = [];
 
-    // Busca primária (Página 1 - até 50 vídeos)
+    // Busca Página 1 (até 50 vídeos)
     const urlPage1 = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
     const resPage1 = await fetch(urlPage1);
     const dataPage1 = await resPage1.json();
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
     if (dataPage1.items && dataPage1.items.length > 0) {
       itemsBusca.push(...dataPage1.items);
 
-      // Página 2 para aumentar a amostragem
+      // Busca Página 2 para aumentar a amostragem
       if (dataPage1.nextPageToken) {
         const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
         const resPage2 = await fetch(urlPage2);
@@ -64,14 +64,14 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Regex para capturar links de layout oficiais do Clash of Clans
+    // Regex para capturar os links de layout oficial do Clash of Clans
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
 
-    // Regex abrangente para todas as variações do CV selecionado (ex: TH14, TH 14, CV14, CV 14, Town Hall 14, Townhall14, Centro de Vila 14, Centro de Vila14)
-    const cvTargetRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}\\b`, 'i');
+    // Regex abrangente para todas as variações do CV selecionado (ex: TH14, TH 14, CV14, CV 14, Town Hall 14, Townhall14, Centro de Vila 14)
+    const cvTargetRegex = new RegExp(`(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}(?!\\d)`, 'i');
 
-    // Regex para identificar QUALQUER OUTRO número de CV (ex: se buscou 14, pega TH15, CV18, Townhall13, Centro de Vila 16)
-    const outroCvRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cv}\\b)\\d+\\b`, 'i');
+    // Regex para identificar quando o TÍTULO é explicitamente de outro CV
+    const outroCvNoTituloRegex = new RegExp(`(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cv}(?!\\d))\\d+`, 'i');
 
     const resultados = [];
 
@@ -85,29 +85,35 @@ module.exports = async (req, res) => {
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>');
 
-      const ehTargetNoTitulo = cvTargetRegex.test(titulo);
-      const ehOutroCvNoTitulo = outroCvRegex.test(titulo);
+      // OBRIGATÓRIO: O vídeo precisa ter pelo menos um link de layout do Clash
+      const links = descricaoCompleta.match(cocLayoutRegex);
+      if (!links || links.length === 0) {
+        continue;
+      }
 
-      // 1. Se o título menciona OUTRO nível de CV (ex: TH17, CV18) e NÃO menciona o pesquisado, descarta imediatamente!
+      const ehTargetNoTitulo = cvTargetRegex.test(titulo);
+      const ehOutroCvNoTitulo = outroCvNoTituloRegex.test(titulo);
+
+      // FILTRO 1: Se o TÍTULO fala explicitamente de OUTRO CV (ex: "Best TH18 Base") e não do nosso, descarta com certeza!
       if (ehOutroCvNoTitulo && !ehTargetNoTitulo) {
         continue;
       }
 
-      // 2. Se o título não especifica o CV pesquisado:
-      if (!ehTargetNoTitulo) {
-        const ehTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
-        const ehOutroCvNaDescricao = outroCvRegex.test(descricaoCompleta);
+      let ehValido = false;
 
-        // Se na descrição também não tem o CV alvo OU se tiver uma "salada de tags" com outros CVs, descarta.
-        if (!ehTargetNaDescricao || ehOutroCvNaDescricao) {
-          continue;
+      // FILTRO 2: Se o título tem o CV correto (ex: TH14, CV 14), está 100% aprovado!
+      if (ehTargetNoTitulo) {
+        ehValido = true;
+      } else {
+        // FILTRO 3: Se o título é genérico (ex: "Melhor Base da Semana"), olhamos os primeiros 400 caracteres da descrição.
+        // Se a menção ao CV pesquisado estiver no topo do texto da descrição, o vídeo é aceito!
+        const topoDescricao = descricaoCompleta.substring(0, 400);
+        if (cvTargetRegex.test(topoDescricao)) {
+          ehValido = true;
         }
       }
 
-      // 3. Extração dos links de Layout
-      const links = descricaoCompleta.match(cocLayoutRegex);
-
-      if (links && links.length > 0) {
+      if (ehValido) {
         const linksUnicos = [...new Set(links)].map(link => 
           link.replace(/[.,;)]+$/, '')
         );
