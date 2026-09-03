@@ -64,11 +64,11 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Regex ultra-flexível para capturar qualquer URL do Clash na descrição inteira
-    const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'<>]+/gi;
+    // Captura links oficiais (clashofclans.com) E encurtadores comuns de layout (ex: clashofclans.fan)
+    const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?(?:clashofclans\.com|clashofclans\.fan)\/[^\s"'<>]+/gi;
 
-    // Captura se o termo do CV pesquisado está presente no texto (ex: TH14, CV14, Town Hall 14, Centro de Vila 14, etc.)
-    const cvTargetRegex = new RegExp(`(?:TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}\\b`, 'i');
+    // Regexp flexível para validar a presença do CV no título/descrição
+    const cvTargetRegex = new RegExp(`(?:TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)?\\s*${cv}\\b`, 'i');
 
     const resultados = [];
 
@@ -76,42 +76,32 @@ module.exports = async (req, res) => {
       const titulo = item.snippet.title || '';
       let descricaoCompleta = item.snippet.description || '';
 
-      // Decodifica entidades HTML para garantir a integridade dos links na descrição
+      // Decodifica entidades HTML para garantir a integridade dos links
       descricaoCompleta = descricaoCompleta
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>');
 
-      // Busca todos os links do Clash na descrição inteira
+      // Busca todos os links de layout na descrição inteira
       const linksEncontrados = descricaoCompleta.match(cocLayoutRegex);
       if (!linksEncontrados || linksEncontrados.length === 0) {
-        continue; // Se não tiver links de layout, descarte
+        continue;
       }
 
-      // Limpa e valida os links extraídos
+      // Limpa pontuações no final dos links e aceita OpenLayout ou links do clashofclans.fan
       const linksLimpos = linksEncontrados
-        .map(link => link.replace(/[.,;)!?\]]+$/, '')) // Remove pontuações presas no final do link
-        .filter(link => link.includes('action=OpenLayout')); // Filtra apenas links reais de carregar vila
+        .map(link => link.replace(/[.,;)!?\]]+$/, ''))
+        .filter(link => link.includes('OpenLayout') || link.includes('clashofclans.fan'));
 
-      const linksUnicos = [...new Set(linksLimpos)]; // Remove links idênticos/repetidos
+      const linksUnicos = [...new Set(linksLimpos)];
 
       if (linksUnicos.length === 0) {
         continue;
       }
 
-      // Procura números de CV citados no TÍTULO (ex: captura o "18" de "TH18")
-      const numerosNoTitulo = [...titulo.matchAll(/(?:TH|CV|Town\s*Hall|Townhall|Centro\s*de\s*Vila)[-_\\s]*(\d+)\b/gi)].map(m => m[1]);
-
-      // Se o título menciona especificamente OUTRO CV (ex: Título é TH18 e buscou CV14), ignora
-      if (numerosNoTitulo.length > 0 && !numerosNoTitulo.includes(String(cv))) {
-        continue;
-      }
-
-      // Aceita se o CV pesquisado estiver presente no TÍTULO ou em QUALQUER lugar da DESCRIÇÃO
-      const temTargetNoTitulo = cvTargetRegex.test(titulo);
-      const temTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
-
-      if (temTargetNoTitulo || temTargetNaDescricao) {
+      // Valida se o vídeo pertence ao CV solicitado
+      const textoAnalise = `${titulo} ${descricaoCompleta}`;
+      if (cvTargetRegex.test(textoAnalise)) {
         resultados.push({
           titulo: item.snippet.title,
           thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
