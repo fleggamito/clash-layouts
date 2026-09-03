@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    // Query expandida para a API do YouTube entregar o máximo de amostragem
+    // Query expandida para a API do YouTube
     const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" OR "Centro de Vila ${cv}" OR "Townhall${cv}" base layout clash of clans`;
 
     let itemsBusca = [];
@@ -35,7 +35,7 @@ module.exports = async (req, res) => {
 
       // Busca Página 2 para aumentar a amostragem
       if (dataPage1.nextPageToken) {
-        const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
+        const urlPage2 = `${urlPage1}&pageToken=${dataPage2.nextPageToken}`;
         const resPage2 = await fetch(urlPage2);
         const dataPage2 = await resPage2.json();
         if (dataPage2.items && dataPage2.items.length > 0) {
@@ -67,10 +67,10 @@ module.exports = async (req, res) => {
     // Regex para capturar os links de layout oficial do Clash of Clans
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
 
-    // Regex abrangente para todas as variações do CV selecionado (ex: TH14, TH 14, CV14, CV 14, Town Hall 14, Townhall14, Centro de Vila 14)
+    // Regex abrangente para todas as variações do CV selecionado
     const cvTargetRegex = new RegExp(`(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}(?!\\d)`, 'i');
 
-    // Regex para identificar quando o TÍTULO é explicitamente de outro CV
+    // Regex para identificar quando o TÍTULO aponta para OUTRO CV
     const outroCvNoTituloRegex = new RegExp(`(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cv}(?!\\d))\\d+`, 'i');
 
     const resultados = [];
@@ -94,26 +94,16 @@ module.exports = async (req, res) => {
       const ehTargetNoTitulo = cvTargetRegex.test(titulo);
       const ehOutroCvNoTitulo = outroCvNoTituloRegex.test(titulo);
 
-      // FILTRO 1: Se o TÍTULO fala explicitamente de OUTRO CV (ex: "Best TH18 Base") e não do nosso, descarta com certeza!
+      // REGRA 1: Se o TÍTULO fala de OUTRO CV (ex: "Best TH18 Base"), ignora na hora!
+      // Isso bloqueia vídeos de outros CVs que tentam usar tags na descrição.
       if (ehOutroCvNoTitulo && !ehTargetNoTitulo) {
         continue;
       }
 
-      let ehValido = false;
+      // REGRA 2: Aceita se o CV estiver no TÍTULO OU em QUALQUER PARTE da descrição!
+      const ehTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
 
-      // FILTRO 2: Se o título tem o CV correto (ex: TH14, CV 14), está 100% aprovado!
-      if (ehTargetNoTitulo) {
-        ehValido = true;
-      } else {
-        // FILTRO 3: Se o título é genérico (ex: "Melhor Base da Semana"), olhamos os primeiros 400 caracteres da descrição.
-        // Se a menção ao CV pesquisado estiver no topo do texto da descrição, o vídeo é aceito!
-        const topoDescricao = descricaoCompleta.substring(0, 400);
-        if (cvTargetRegex.test(topoDescricao)) {
-          ehValido = true;
-        }
-      }
-
-      if (ehValido) {
+      if (ehTargetNoTitulo || ehTargetNaDescricao) {
         const linksUnicos = [...new Set(links)].map(link => 
           link.replace(/[.,;)]+$/, '')
         );
