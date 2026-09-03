@@ -6,24 +6,23 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'A chave YOUTUBE_API_KEY não foi configurada na Vercel.' });
   }
 
-  // Validação do parâmetro de entrada
-  if (!cv || !/^\d+$/.test(cv.toString().trim())) {
-    return res.status(400).json({ error: 'Informe um nível válido do Centro de Vila (somente números).' });
+  if (!cv) {
+    return res.status(400).json({ error: 'Informe o nível do Centro de Vila.' });
   }
 
-  const cvLevel = cv.toString().trim();
-
   try {
-    // 1. Data limite: 45 dias atrás
+    // 1. Define data limite: 45 dias atrás
     const quarentaECincoDiasAtras = new Date();
     quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
     const publishedAfter = quarentaECincoDiasAtras.toISOString();
 
-    const query = `TH${cvLevel} OR "Town Hall ${cvLevel}" OR "CV ${cvLevel}" OR "Centro de Vila ${cvLevel}" base layout clash of clans`;
+    // Query de busca abrangente enviada ao YouTube
+    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" OR "Centro de Vila ${cv}" base layout clash of clans`;
 
-    // Busca primária (Página 1)
+    let itemsBusca = [];
+
+    // Busca primária (Página 1 - até 50 vídeos)
     const urlPage1 = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
-    
     const resPage1 = await fetch(urlPage1);
     const dataPage1 = await resPage1.json();
 
@@ -31,16 +30,17 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: `Erro do Google (${dataPage1.error.code}): ${dataPage1.error.message}` });
     }
 
-    let itemsBusca = dataPage1.items || [];
+    if (dataPage1.items && dataPage1.items.length > 0) {
+      itemsBusca.push(...dataPage1.items);
 
-    // Página 2 (se houver)
-    if (itemsBusca.length > 0 && dataPage1.nextPageToken) {
-      const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
-      const resPage2 = await fetch(urlPage2);
-      const dataPage2 = await resPage2.json();
-      
-      if (dataPage2.items && dataPage2.items.length > 0) {
-        itemsBusca.push(...dataPage2.items);
+      // Página 2 para aumentar a amostragem
+      if (dataPage1.nextPageToken) {
+        const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
+        const resPage2 = await fetch(urlPage2);
+        const dataPage2 = await resPage2.json();
+        if (dataPage2.items && dataPage2.items.length > 0) {
+          itemsBusca.push(...dataPage2.items);
+        }
       }
     }
 
@@ -48,8 +48,8 @@ module.exports = async (req, res) => {
       return res.json({ success: true, total: 0, data: [] });
     }
 
-    // IDs de vídeos sem duplicatas
-    const videoIdsArray = [...new Set(itemsBusca.map(item => item.id?.videoId).filter(Boolean))];
+    // Extrai IDs únicos de vídeos
+    const videoIdsArray = [...new Set(itemsBusca.map(item => item.id.videoId))];
 
     // Detalhes dos vídeos em lotes de 50
     let videoItems = [];
@@ -64,68 +64,79 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Regex para capturar links de layout
+    // Regex para capturar links de layout oficiais do Clash of Clans
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
 
-    // Regex para validar o id=TH{cv} dentro do próprio link (ex: id=TH18%3A ou id=TH18:)
-    const linkThRegex = new RegExp(`[?&]id=TH${cvLevel}(?:%3A|:|&|$)`, 'i');
+    // Regex abrangente para todas as variações do CV selecionado
+    const cvTargetRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}\\b`, 'i');
 
-    // Regex auxiliares de título/descrição
-    const cvTargetRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cvLevel}\\b`, 'i');
-    const outroCvRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cvLevel}\\b)\\d+\\b`, 'i');
+    // Regex para identificar QUALQUER OUTRO número de CV
+    const outroCvRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cv}\\b)\\d+\\b`, 'i');
+
+    // Regex da sua ideia: verifica se o próprio link contém id=TH{cv} (ou th{cv})
+    const linkThRegex = new RegExp(`[?&]id=TH${cv}(%3A|:|_|&|$)`, 'i');
 
     const resultados = [];
 
     for (const item of videoItems) {
       const titulo = item.snippet.title || '';
-      let descricao = item.snippet.description || '';
+      let descricaoCompleta = item.snippet.description || '';
 
-      descricao = descricao
+      // Limpa entidades HTML na descrição
+      descricaoCompleta = descricaoCompleta
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&#39;/g, "'")
-        .replace(/&quot;/g, '"');
+        .replace(/&gt;/g, '>');
 
       const ehTargetNoTitulo = cvTargetRegex.test(titulo);
       const ehOutroCvNoTitulo = outroCvRegex.test(titulo);
 
+      // 1. Se o título menciona OUTRO nível de CV e NÃO menciona o pesquisado, descarta
       if (ehOutroCvNoTitulo && !ehTargetNoTitulo) {
         continue;
       }
 
+      // 2. Se o título não especifica o CV pesquisado:
       if (!ehTargetNoTitulo) {
-        const ehTargetNaDescricao = cvTargetRegex.test(descricao);
-        const ehOutroCvNaDescricao = outroCvRegex.test(descricao);
+        const ehTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
+        const ehOutroCvNaDescricao = outroCvRegex.test(descricaoCompleta);
 
         if (!ehTargetNaDescricao || ehOutroCvNaDescricao) {
           continue;
         }
       }
 
-      // Extração e Filtragem Estrita dos Links
-      const matches = descricao.match(cocLayoutRegex);
+      // 3. Extração dos links de Layout
+      const links = descricaoCompleta.match(cocLayoutRegex);
 
-      if (matches && matches.length > 0) {
-        const linksValidados = matches
-          .map(link => link.replace(/[.,;)]+$/, ''))
-          .filter(link => linkThRegex.test(link)); // Valida se o link pertence realmente ao TH pesquisado
+      if (links && links.length > 0) {
+        const linksLimpos = [...new Set(links)].map(link => 
+          link.replace(/[.,;)]+$/, '')
+        );
 
-        // Se encontrou links válidos correspondentes ao CV
-        if (linksValidados.length > 0) {
-          const linksUnicos = [...new Set(linksValidados)];
+        // Filtra os links usando a sua ideia do id=TH{cv}
+        // Se o link especificar um TH diferente (ex: id=TH15), descarta. Se não tiver ID explícito ou for o TH certo, mantém.
+        const linksFiltrados = linksLimpos.filter(link => {
+          const temOutroThNoLink = /[?&]id=TH\d+/i.test(link);
+          if (temOutroThNoLink) {
+            return linkThRegex.test(link);
+          }
+          return true; // Se o link não tiver a tag TH no id, mantém por garantia
+        });
 
+        if (linksFiltrados.length > 0) {
           resultados.push({
             titulo: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default?.url,
+            thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
             videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
             publicadoEm: item.snippet.publishedAt,
-            layoutLinks: linksUnicos
+            layoutLinks: linksFiltrados
           });
         }
       }
     }
 
+    // Ordenação: mais recentes primeiro
     resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
 
     return res.json({ success: true, total: resultados.length, data: resultados });
