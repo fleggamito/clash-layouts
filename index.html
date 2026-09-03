@@ -110,7 +110,7 @@
     .search-section p { 
       color: var(--text-muted); 
       font-size: 14px; 
-    }
+    } 
     
     .search-box { 
       display: flex; 
@@ -143,7 +143,7 @@
       border-color: var(--accent-gold);
     }
 
-    button { 
+    .btn-buscar { 
       background: linear-gradient(135deg, #f5b014 0%, #e09d00 100%); 
       color: #0b0c10; 
       font-weight: 700; 
@@ -152,10 +152,25 @@
       box-shadow: 0 4px 15px rgba(245, 176, 20, 0.2);
     }
 
-    button:hover:not(:disabled) { 
+    .btn-buscar:hover:not(:disabled) { 
       background: linear-gradient(135deg, #ffd000 0%, #f5b014 100%); 
       transform: translateY(-2px); 
       box-shadow: 0 6px 20px rgba(245, 176, 20, 0.35);
+    }
+
+    .btn-limpar {
+      background: #232530;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #2d303e;
+      transition: all 0.25s ease;
+    }
+
+    .btn-limpar:hover {
+      background: #2d303e;
+      color: #fff;
+      transform: translateY(-2px);
     }
 
     button:disabled {
@@ -456,7 +471,8 @@
             <option value="10">CV 10 (TH10)</option>
           </select>
 
-          <button id="btnBuscar" onclick="buscarLayouts()">Buscar Layouts</button>
+          <button id="btnBuscar" class="btn-buscar" onclick="buscarLayouts()">Buscar Layouts</button>
+          <button id="btnLimpar" class="btn-limpar" onclick="limparBusca()">Limpar</button>
         </div>
       </div>
     </header>
@@ -549,6 +565,16 @@
         btnBuscar.disabled = false;
         btnBuscar.innerText = 'Buscar Layouts';
       }
+    }
+
+    function limparBusca() {
+      document.getElementById('cv').selectedIndex = 0;
+      document.getElementById('status').innerText = '';
+      document.getElementById('resultados').innerHTML = '';
+      document.getElementById('pagination').innerHTML = '';
+      document.getElementById('controlsBar').style.display = 'none';
+      todosResultados = [];
+      paginaAtual = 1;
     }
 
     function alterarOrdenacao() {
