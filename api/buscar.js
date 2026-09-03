@@ -67,14 +67,11 @@ module.exports = async (req, res) => {
     // Regex para capturar links de layout oficiais do Clash of Clans
     const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
 
-    // Regex abrangente para todas as variações do CV selecionado
+    // Regex abrangente para todas as variações do CV selecionado (ex: TH14, TH 14, CV14, CV 14, Town Hall 14, Townhall14, Centro de Vila 14, Centro de Vila14)
     const cvTargetRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*${cv}\\b`, 'i');
 
-    // Regex para identificar QUALQUER OUTRO número de CV
+    // Regex para identificar QUALQUER OUTRO número de CV (ex: se buscou 14, pega TH15, CV18, Townhall13, Centro de Vila 16)
     const outroCvRegex = new RegExp(`\\b(TH|CV|Town\\s*Hall|Townhall|Centro\\s*de\\s*Vila)[-_\\s]*(?!${cv}\\b)\\d+\\b`, 'i');
-
-    // Regex da sua ideia: verifica se o próprio link contém id=TH{cv} (ou th{cv})
-    const linkThRegex = new RegExp(`[?&]id=TH${cv}(%3A|:|_|&|$)`, 'i');
 
     const resultados = [];
 
@@ -91,7 +88,7 @@ module.exports = async (req, res) => {
       const ehTargetNoTitulo = cvTargetRegex.test(titulo);
       const ehOutroCvNoTitulo = outroCvRegex.test(titulo);
 
-      // 1. Se o título menciona OUTRO nível de CV e NÃO menciona o pesquisado, descarta
+      // 1. Se o título menciona OUTRO nível de CV (ex: TH17, CV18) e NÃO menciona o pesquisado, descarta imediatamente!
       if (ehOutroCvNoTitulo && !ehTargetNoTitulo) {
         continue;
       }
@@ -101,6 +98,7 @@ module.exports = async (req, res) => {
         const ehTargetNaDescricao = cvTargetRegex.test(descricaoCompleta);
         const ehOutroCvNaDescricao = outroCvRegex.test(descricaoCompleta);
 
+        // Se na descrição também não tem o CV alvo OU se tiver uma "salada de tags" com outros CVs, descarta.
         if (!ehTargetNaDescricao || ehOutroCvNaDescricao) {
           continue;
         }
@@ -110,29 +108,17 @@ module.exports = async (req, res) => {
       const links = descricaoCompleta.match(cocLayoutRegex);
 
       if (links && links.length > 0) {
-        const linksLimpos = [...new Set(links)].map(link => 
+        const linksUnicos = [...new Set(links)].map(link => 
           link.replace(/[.,;)]+$/, '')
         );
 
-        // Filtra os links usando a sua ideia do id=TH{cv}
-        // Se o link especificar um TH diferente (ex: id=TH15), descarta. Se não tiver ID explícito ou for o TH certo, mantém.
-        const linksFiltrados = linksLimpos.filter(link => {
-          const temOutroThNoLink = /[?&]id=TH\d+/i.test(link);
-          if (temOutroThNoLink) {
-            return linkThRegex.test(link);
-          }
-          return true; // Se o link não tiver a tag TH no id, mantém por garantia
+        resultados.push({
+          titulo: item.snippet.title,
+          thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
+          videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
+          publicadoEm: item.snippet.publishedAt,
+          layoutLinks: linksUnicos
         });
-
-        if (linksFiltrados.length > 0) {
-          resultados.push({
-            titulo: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
-            videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
-            publicadoEm: item.snippet.publishedAt,
-            layoutLinks: linksFiltrados
-          });
-        }
       }
     }
 
