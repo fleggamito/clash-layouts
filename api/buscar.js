@@ -1,216 +1,200 @@
- module.exports = async (req, res) => {
-
+module.exports = async (req, res) => {
   const { cv } = req.query;
-
   const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-
   if (!YOUTUBE_API_KEY) {
-
-    return res.status(500).json({ error: 'A chave YOUTUBE_API_KEY não foi configurada na Vercel.' });
-
+    return res.status(500).json({
+      error: 'A chave YOUTUBE_API_KEY não foi configurada na Vercel.'
+    });
   }
-
 
   if (!cv) {
-
-    return res.status(400).json({ error: 'Informe o nível do Centro de Vila.' });
-
+    return res.status(400).json({
+      error: 'Informe o nível do Centro de Vila.'
+    });
   }
 
-
   try {
+    // Últimos 45 dias
+    const dataLimite = new Date();
+    dataLimite.setDate(dataLimite.getDate() - 45);
 
-    // 1. Define data limite: 45 dias atrás
+    const publishedAfter = dataLimite.toISOString();
 
-    const quarentaECincoDiasAtras = new Date();
-
-    quarentaECincoDiasAtras.setDate(quarentaECincoDiasAtras.getDate() - 45);
-
-    const publishedAfter = quarentaECincoDiasAtras.toISOString();
-
-
-    // Query de busca abrangente e sem restrições que quebrem o algoritmo do YouTube
-
-    const query = `TH${cv} OR "Town Hall ${cv}" OR "CV ${cv}" base layout clash of clans`;
-
+    // Busca principal
+    const query = `TH${cv} base layout Clash of Clans`;
 
     let itemsBusca = [];
 
-
-    // Fazemos a busca primária (Página 1 - até 50 vídeos)
-
-    const urlPage1 = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=50&order=date&publishedAfter=${publishedAfter}&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`;
+    const urlPage1 =
+      `https://www.googleapis.com/youtube/v3/search?` +
+      `part=snippet` +
+      `&maxResults=50` +
+      `&order=date` +
+      `&publishedAfter=${publishedAfter}` +
+      `&q=${encodeURIComponent(query)}` +
+      `&type=video` +
+      `&key=${YOUTUBE_API_KEY}`;
 
     const resPage1 = await fetch(urlPage1);
-
     const dataPage1 = await resPage1.json();
 
-
     if (dataPage1.error) {
-
-      return res.status(400).json({ error: `Erro do Google (${dataPage1.error.code}): ${dataPage1.error.message}` });
-
+      return res.status(400).json({
+        error: `Erro do Google (${dataPage1.error.code}): ${dataPage1.error.message}`
+      });
     }
 
-
-    if (dataPage1.items && dataPage1.items.length > 0) {
-
+    if (dataPage1.items?.length) {
       itemsBusca.push(...dataPage1.items);
 
-
-      // Se houver mais resultados, busca a Página 2 para aumentar a amostragem
-
       if (dataPage1.nextPageToken) {
-
-        const urlPage2 = `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
+        const urlPage2 =
+          `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
 
         const resPage2 = await fetch(urlPage2);
-
         const dataPage2 = await resPage2.json();
 
-        if (dataPage2.items && dataPage2.items.length > 0) {
-
+        if (dataPage2.items?.length) {
           itemsBusca.push(...dataPage2.items);
-
         }
-
       }
-
     }
-
 
     if (itemsBusca.length === 0) {
-
-      return res.json({ success: true, total: 0, data: [] });
-
+      return res.json({
+        success: true,
+        total: 0,
+        data: []
+      });
     }
 
-
-    // Extrai IDs únicos de vídeos
-
-    const videoIdsArray = [...new Set(itemsBusca.map(item => item.id.videoId))];
-
-
-    // Detalhes dos vídeos em lotes de 50 (limite máximo da API por requisição)
+    // Remove IDs duplicados
+    const videoIds = [
+      ...new Set(
+        itemsBusca
+          .map(item => item.id?.videoId)
+          .filter(Boolean)
+      )
+    ];
 
     let videoItems = [];
 
-    for (let i = 0; i < videoIdsArray.length; i += 50) {
+    // Consulta detalhes dos vídeos
+    for (let i = 0; i < videoIds.length; i += 50) {
+      const chunkIds = videoIds
+        .slice(i, i + 50)
+        .join(',');
 
-      const chunkIds = videoIdsArray.slice(i, i + 50).join(',');
-
-      const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${chunkIds}&key=${YOUTUBE_API_KEY}`;
+      const videosUrl =
+        `https://www.googleapis.com/youtube/v3/videos?` +
+        `part=snippet` +
+        `&id=${chunkIds}` +
+        `&key=${YOUTUBE_API_KEY}`;
 
       const videosRes = await fetch(videosUrl);
-
       const videosData = await videosRes.json();
 
-
-      if (videosData.items) {
-
+      if (videosData.items?.length) {
         videoItems.push(...videosData.items);
-
       }
-
     }
 
-
-    // Regex aprimorada para capturar links do Clash of Clans de forma abrangente
-
-    const cocLayoutRegex = /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'>]*action=OpenLayout[^\s"'>]*/gi;
-
-
-    // Regex flexível para validar se o vídeo realmente fala do CV/TH escolhido
-
-    // Aceita: TH15, TH 15, TH-15, Town Hall 15, CV15, CV 15
-
-    const cvStrictRegex = new RegExp(`\\b(TH[-_\\s]*${cv}|Town\\s*Hall[-_\\s]*${cv}|CV[-_\\s]*${cv})\\b`, 'i');
-
-    
-
-    // Evita falsos positivos onde outro CV é o foco principal isolado (ex: buscar TH14 e vir apenas TH15)
-
-    const outroCvRegex = new RegExp(`\\b(TH|Town\\s*Hall|CV)[-_\\s]*(?!${cv}\\b)\\d+\\b`, 'i');
-
+    // Captura links de layouts do Clash of Clans
+    const cocLayoutRegex =
+      /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'<>]*/gi;
 
     const resultados = [];
 
-
     for (const item of videoItems) {
+      const descricao =
+        (item.snippet.description || '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>');
 
-      const titulo = item.snippet.title || '';
+      const linksEncontrados =
+        descricao.match(cocLayoutRegex) || [];
 
-      let descricaoCompleta = item.snippet.description || '';
-
-
-      // Limpa entidades HTML na descrição para não quebrar os links
-
-      descricaoCompleta = descricaoCompleta
-
-        .replace(/&amp;/g, '&')
-
-        .replace(/&lt;/g, '<')
-
-        .replace(/&gt;/g, '>');
-
-
-      const ehTargetCv = cvStrictRegex.test(titulo);
-
-      const ehOutroCv = outroCvRegex.test(titulo);
-
-
-      // Só aceita o vídeo se mencionar o CV correto no título
-
-      if (!ehTargetCv && ehOutroCv) continue;
-
-      if (!ehTargetCv && !cvStrictRegex.test(descricaoCompleta)) continue;
-
-
-      const links = descricaoCompleta.match(cocLayoutRegex);
-
-
-      if (links && links.length > 0) {
-
-        // Limpa caracteres soltos no final dos links extraídos (ex: pontuação)
-
-        const linksUnicos = [...new Set(links)].map(link => 
-
-          link.replace(/[.,;)]+$/, '')
-
-        );
-
-
-        resultados.push({
-
-          titulo: item.snippet.title,
-
-          thumbnail: item.snippet.thumbnails.high ? item.snippet.thumbnails.high.url : item.snippet.thumbnails.default.url,
-
-          videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
-
-          publicadoEm: item.snippet.publishedAt,
-
-          layoutLinks: linksUnicos
-
-        });
-
+      if (!linksEncontrados.length) {
+        continue;
       }
 
+      const linksCvCorreto = [];
+
+      for (const link of linksEncontrados) {
+        const linkLimpo = link.replace(/[.,;)]+$/, '');
+
+        let linkDecodificado;
+
+        try {
+          linkDecodificado = decodeURIComponent(linkLimpo);
+        } catch {
+          linkDecodificado = linkLimpo;
+        }
+
+        /*
+           Exemplos:
+           id=TH17:...
+           id=TH18:...
+           id=TH19:...
+        */
+        const match = linkDecodificado.match(/id=TH(\d+)/i);
+
+        if (match && match[1] === String(cv)) {
+          linksCvCorreto.push(linkLimpo);
+        }
+      }
+
+      // Remove duplicados
+      const linksUnicos = [...new Set(linksCvCorreto)];
+
+      // Se não houver layout exatamente do CV buscado, descarta o vídeo
+      if (linksUnicos.length === 0) {
+        continue;
+      }
+
+      resultados.push({
+        titulo: item.snippet.title,
+        thumbnail:
+          item.snippet.thumbnails?.high?.url ||
+          item.snippet.thumbnails?.medium?.url ||
+          item.snippet.thumbnails?.default?.url,
+
+        videoUrl: `https://www.youtube.com/watch?v=${item.id}`,
+
+        publicadoEm: item.snippet.publishedAt,
+
+        layoutLinks: linksUnicos
+      });
     }
 
+    // Remove vídeos duplicados
+    const videosUnicos = [];
+    const idsProcessados = new Set();
 
-    // Ordenação: mais recentes primeiro
+    for (const video of resultados) {
+      if (!idsProcessados.has(video.videoUrl)) {
+        idsProcessados.add(video.videoUrl);
+        videosUnicos.push(video);
+      }
+    }
 
-    resultados.sort((a, b) => new Date(b.publicadoEm) - new Date(a.publicadoEm));
+    videosUnicos.sort(
+      (a, b) =>
+        new Date(b.publicadoEm) -
+        new Date(a.publicadoEm)
+    );
 
-
-    return res.json({ success: true, total: resultados.length, data: resultados });
+    return res.json({
+      success: true,
+      total: videosUnicos.length,
+      data: videosUnicos
+    });
 
   } catch (error) {
-
-    return res.status(500).json({ error: `Erro no servidor: ${error.message}` });
-
+    return res.status(500).json({
+      error: `Erro no servidor: ${error.message}`
+    });
   }
-
-}; 
+};
