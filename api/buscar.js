@@ -1,5 +1,11 @@
+const cache = global.layoutCache || new Map();
+global.layoutCache = cache;
+
+const CACHE_TTL = 3 * 60 * 60 * 1000; // 3 horas
+
 module.exports = async (req, res) => {
   const { cv } = req.query;
+
   const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
   if (!YOUTUBE_API_KEY) {
@@ -14,14 +20,28 @@ module.exports = async (req, res) => {
     });
   }
 
+  const cacheKey = `cv_${cv}`;
+
+  const cacheItem = cache.get(cacheKey);
+
+  if (
+    cacheItem &&
+    Date.now() - cacheItem.timestamp < CACHE_TTL
+  ) {
+    return res.json({
+      success: true,
+      total: cacheItem.data.length,
+      data: cacheItem.data,
+      cached: true
+    });
+  }
+
   try {
-    // Últimos 45 dias
     const dataLimite = new Date();
     dataLimite.setDate(dataLimite.getDate() - 45);
 
     const publishedAfter = dataLimite.toISOString();
 
-    // Busca principal
     const query = `TH${cv} base layout Clash of Clans`;
 
     let itemsBusca = [];
@@ -40,6 +60,24 @@ module.exports = async (req, res) => {
     const dataPage1 = await resPage1.json();
 
     if (dataPage1.error) {
+
+      // Se a quota acabar, tenta retornar cache expirado
+      if (
+        cacheItem &&
+        (
+          dataPage1.error.message?.includes('quota') ||
+          dataPage1.error.reason === 'quotaExceeded'
+        )
+      ) {
+        return res.json({
+          success: true,
+          total: cacheItem.data.length,
+          data: cacheItem.data,
+          cached: true,
+          warning: 'Exibindo resultados armazenados devido ao limite da API.'
+        });
+      }
+
       return res.status(400).json({
         error: `Erro do Google (${dataPage1.error.code}): ${dataPage1.error.message}`
       });
@@ -49,6 +87,7 @@ module.exports = async (req, res) => {
       itemsBusca.push(...dataPage1.items);
 
       if (dataPage1.nextPageToken) {
+
         const urlPage2 =
           `${urlPage1}&pageToken=${dataPage1.nextPageToken}`;
 
@@ -62,14 +101,20 @@ module.exports = async (req, res) => {
     }
 
     if (itemsBusca.length === 0) {
+
+      cache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: []
+      });
+
       return res.json({
         success: true,
         total: 0,
-        data: []
+        data: [],
+        cached: false
       });
     }
 
-    // Remove IDs duplicados
     const videoIds = [
       ...new Set(
         itemsBusca
@@ -80,11 +125,12 @@ module.exports = async (req, res) => {
 
     let videoItems = [];
 
-    // Consulta detalhes dos vídeos
     for (let i = 0; i < videoIds.length; i += 50) {
-      const chunkIds = videoIds
-        .slice(i, i + 50)
-        .join(',');
+
+      const chunkIds =
+        videoIds
+          .slice(i, i + 50)
+          .join(',');
 
       const videosUrl =
         `https://www.googleapis.com/youtube/v3/videos?` +
@@ -100,13 +146,13 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Captura links de layouts do Clash of Clans
     const cocLayoutRegex =
       /https?:\/\/(?:[a-zA-Z0-9-]+\.)?clashofclans\.com\/[^\s"'<>]*/gi;
 
     const resultados = [];
 
     for (const item of videoItems) {
+
       const descricao =
         (item.snippet.description || '')
           .replace(/&amp;/g, '&')
@@ -123,39 +169,41 @@ module.exports = async (req, res) => {
       const linksCvCorreto = [];
 
       for (const link of linksEncontrados) {
-        const linkLimpo = link.replace(/[.,;)]+$/, '');
+
+        const linkLimpo =
+          link.replace(/[.,;)]+$/, '');
 
         let linkDecodificado;
 
         try {
-          linkDecodificado = decodeURIComponent(linkLimpo);
+          linkDecodificado =
+            decodeURIComponent(linkLimpo);
         } catch {
           linkDecodificado = linkLimpo;
         }
 
-        /*
-           Exemplos:
-           id=TH17:...
-           id=TH18:...
-           id=TH19:...
-        */
-        const match = linkDecodificado.match(/id=TH(\d+)/i);
+        const match =
+          linkDecodificado.match(/id=TH(\d+)/i);
 
-        if (match && match[1] === String(cv)) {
+        if (
+          match &&
+          match[1] === String(cv)
+        ) {
           linksCvCorreto.push(linkLimpo);
         }
       }
 
-      // Remove duplicados
-      const linksUnicos = [...new Set(linksCvCorreto)];
+      const linksUnicos =
+        [...new Set(linksCvCorreto)];
 
-      // Se não houver layout exatamente do CV buscado, descarta o vídeo
+      // Só exibe vídeos que realmente possuem layouts do TH selecionado
       if (linksUnicos.length === 0) {
         continue;
       }
 
       resultados.push({
         titulo: item.snippet.title,
+
         thumbnail:
           item.snippet.thumbnails?.high?.url ||
           item.snippet.thumbnails?.medium?.url ||
@@ -169,11 +217,11 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Remove vídeos duplicados
     const videosUnicos = [];
     const idsProcessados = new Set();
 
     for (const video of resultados) {
+
       if (!idsProcessados.has(video.videoUrl)) {
         idsProcessados.add(video.videoUrl);
         videosUnicos.push(video);
@@ -186,15 +234,33 @@ module.exports = async (req, res) => {
         new Date(a.publicadoEm)
     );
 
-    return res.json({
-      success: true,
-      total: videosUnicos.length,
+    cache.set(cacheKey, {
+      timestamp: Date.now(),
       data: videosUnicos
     });
 
+    return res.json({
+      success: true,
+      total: videosUnicos.length,
+      data: videosUnicos,
+      cached: false
+    });
+
   } catch (error) {
+
+    if (cacheItem) {
+      return res.json({
+        success: true,
+        total: cacheItem.data.length,
+        data: cacheItem.data,
+        cached: true,
+        warning: 'Exibindo resultados armazenados em cache.'
+      });
+    }
+
     return res.status(500).json({
       error: `Erro no servidor: ${error.message}`
     });
   }
 };
+``
